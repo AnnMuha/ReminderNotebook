@@ -48,6 +48,7 @@ namespace ReminderNotebook.ViewModels
         }
 
         private readonly DispatcherTimer reminderTimer;
+        private readonly List<IReminderObserver> observers = new();
 
         public MainViewModel()
         {
@@ -67,6 +68,10 @@ namespace ReminderNotebook.ViewModels
             };
             reminderTimer.Tick += ReminderTimer_Tick;
             reminderTimer.Start();
+
+            // 🔔 Підписуємо Notifier як спостерігача
+            var notifier = new Notifier();
+            Subscribe(notifier);
         }
 
         private void ReminderTimer_Tick(object? sender, EventArgs e)
@@ -77,7 +82,7 @@ namespace ReminderNotebook.ViewModels
             {
                 if (!reminder.IsNotified && reminder.ReminderTime <= now)
                 {
-                    Notifier.Show($"⏰ Нагадування: {reminder.Title}");
+                    Notify(reminder);
                     reminder.IsNotified = true;
                 }
             }
@@ -152,6 +157,27 @@ namespace ReminderNotebook.ViewModels
             ApplyFilter();
         }
 
+        // 🔹 Реалізація патерну Observer
+        public void Subscribe(IReminderObserver observer)
+        {
+            if (!observers.Contains(observer))
+                observers.Add(observer);
+        }
+
+        public void Unsubscribe(IReminderObserver observer)
+        {
+            if (observers.Contains(observer))
+                observers.Remove(observer);
+        }
+
+        private void Notify(Reminder reminder)
+        {
+            foreach (var observer in observers)
+            {
+                observer.OnReminderTriggered(reminder);
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {
@@ -159,6 +185,3 @@ namespace ReminderNotebook.ViewModels
         }
     }
 }
-
-
-
