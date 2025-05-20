@@ -9,6 +9,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using ReminderNotebook.Views;
+using ReminderNotebook.Services;
+using System.Linq;
+
 
 namespace ReminderNotebook.ViewModels
 {
@@ -33,16 +37,12 @@ namespace ReminderNotebook.ViewModels
 
         public MainViewModel()
         {
+            var loaded = StorageService.Load();
             Reminders = new ObservableCollection<Reminder>();
 
             AddCommand = new RelayCommand(AddReminder);
             DeleteCommand = new RelayCommand(DeleteReminder, () => SelectedReminder != null);
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
-        }
-
-        private void AddReminder()
-        {
-            // TODO: Відкрити AddReminderWindow, додати новий Reminder
         }
 
         private void DeleteReminder()
@@ -63,6 +63,19 @@ namespace ReminderNotebook.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+
+        private void AddReminder()
+        {
+            var window = new Views.AddReminderWindow();
+            bool? result = window.ShowDialog();
+
+            if (result == true && window.NewReminder != null)
+            {
+                Reminders.Add(window.NewReminder);
+                StorageService.Save(Reminders.ToList());
+            }
+        }
+
     }
 }
 
