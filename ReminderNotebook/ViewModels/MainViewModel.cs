@@ -61,7 +61,7 @@ namespace ReminderNotebook.ViewModels
 
             ApplyFilter();
 
-            // ⏰ Таймер для сповіщень
+            // Таймер для сповіщень
             reminderTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(10)
@@ -69,7 +69,7 @@ namespace ReminderNotebook.ViewModels
             reminderTimer.Tick += ReminderTimer_Tick;
             reminderTimer.Start();
 
-            // 🔔 Підписуємо Notifier як спостерігача
+            // Підписуємо Notifier як спостерігача
             var notifier = new Notifier();
             Subscribe(notifier);
         }
