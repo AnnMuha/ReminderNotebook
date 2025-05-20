@@ -11,14 +11,25 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using ReminderNotebook.Views;
 using ReminderNotebook.Services;
-using System.Linq;
-
 
 namespace ReminderNotebook.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
         public ObservableCollection<Reminder> Reminders { get; set; }
+        public ObservableCollection<Reminder> FilteredReminders { get; set; } = new();
+
+        private string selectedPriorityFilter = "All";
+        public string SelectedPriorityFilter
+        {
+            get => selectedPriorityFilter;
+            set
+            {
+                selectedPriorityFilter = value;
+                OnPropertyChanged();
+                ApplyFilter();
+            }
+        }
 
         public ICommand AddCommand { get; }
         public ICommand DeleteCommand { get; }
@@ -38,29 +49,44 @@ namespace ReminderNotebook.ViewModels
         public MainViewModel()
         {
             var loaded = StorageService.Load();
-            Reminders = new ObservableCollection<Reminder>();
+            Reminders = new ObservableCollection<Reminder>(loaded);
 
             AddCommand = new RelayCommand(AddReminder);
             DeleteCommand = new RelayCommand(DeleteReminder, () => SelectedReminder != null);
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
+
+            ApplyFilter(); // Запускаємо фільтрацію при завантаженні
         }
 
-        private void DeleteReminder()
+        private void ApplyFilter()
         {
-            if (SelectedReminder == null)
-                return;
+            FilteredReminders.Clear();
 
-            Reminders.Remove(SelectedReminder);
-            SelectedReminder = null;
+            var filtered = selectedPriorityFilter == "All"
+                ? Reminders
+                : Reminders.Where(r => r.Priority.ToString() == selectedPriorityFilter);
 
-            StorageService.Save(Reminders.ToList());
+            foreach (var reminder in filtered)
+                FilteredReminders.Add(reminder);
+        }
+
+        private void AddReminder()
+        {
+            var window = new AddReminderWindow();
+            bool? result = window.ShowDialog();
+
+            if (result == true && window.NewReminder != null)
+            {
+                Reminders.Add(window.NewReminder);
+                StorageService.Save(Reminders.ToList());
+                ApplyFilter();
+            }
         }
 
         private void EditReminder()
         {
             if (SelectedReminder == null) return;
 
-            // Створюємо копію, щоб не змінювати напряму
             var editedReminder = new Reminder
             {
                 Title = SelectedReminder.Title,
@@ -75,7 +101,6 @@ namespace ReminderNotebook.ViewModels
 
             if (result == true && window.NewReminder != null)
             {
-                // Замінюємо старий Reminder на оновлений
                 int index = Reminders.IndexOf(SelectedReminder);
                 if (index >= 0)
                 {
@@ -83,8 +108,21 @@ namespace ReminderNotebook.ViewModels
                     SelectedReminder = window.NewReminder;
 
                     StorageService.Save(Reminders.ToList());
+                    ApplyFilter();
                 }
             }
+        }
+
+        private void DeleteReminder()
+        {
+            if (SelectedReminder == null)
+                return;
+
+            Reminders.Remove(SelectedReminder);
+            SelectedReminder = null;
+
+            StorageService.Save(Reminders.ToList());
+            ApplyFilter();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -92,19 +130,7 @@ namespace ReminderNotebook.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
-
-        private void AddReminder()
-        {
-            var window = new Views.AddReminderWindow();
-            bool? result = window.ShowDialog();
-
-            if (result == true && window.NewReminder != null)
-            {
-                Reminders.Add(window.NewReminder);
-                StorageService.Save(Reminders.ToList());
-            }
-        }
-
     }
 }
+
 
