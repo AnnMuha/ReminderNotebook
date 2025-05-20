@@ -16,12 +16,9 @@ using ReminderNotebook.Models;
 
 namespace ReminderNotebook.Views
 {
-    /// <summary>
-    /// Interaction logic for AddReminderWindow.xaml
-    /// </summary>
     public partial class AddReminderWindow : Window
     {
-        public Reminder NewReminder { get; private set; }
+        public Reminder NewReminder { get; private set; } = null!;
 
         public AddReminderWindow()
         {
@@ -31,29 +28,34 @@ namespace ReminderNotebook.Views
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
+            // Перевірка заповненості назви та дати
             if (string.IsNullOrWhiteSpace(TitleTextBox.Text) || DatePicker.SelectedDate == null)
             {
-                MessageBox.Show("Заповніть назву та дату.");
+                MessageBox.Show("Заповніть назву та дату.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            // Перевірка формату часу
             if (!TimeSpan.TryParse(TimeTextBox.Text, out TimeSpan time))
             {
-                MessageBox.Show("Невірний формат часу. Приклад: 14:30");
+                MessageBox.Show("Невірний формат часу. Приклад: 14:30", "Помилка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var dateTime = DatePicker.SelectedDate.Value.Date + time;
+            // Комбінування дати і часу
+            DateTime reminderDateTime = DatePicker.SelectedDate.Value.Date + time;
 
+            // Визначення пріоритету
             ReminderPriority priority = ReminderPriority.Medium;
             if (PriorityComboBox.SelectedIndex == 0) priority = ReminderPriority.Low;
             else if (PriorityComboBox.SelectedIndex == 2) priority = ReminderPriority.High;
 
+            // Створення Reminder
             NewReminder = new Reminder
             {
                 Title = TitleTextBox.Text.Trim(),
                 Description = DescriptionTextBox.Text.Trim(),
-                ReminderTime = dateTime,
+                ReminderTime = reminderDateTime,
                 Priority = priority,
                 CreatedAt = DateTime.Now
             };
