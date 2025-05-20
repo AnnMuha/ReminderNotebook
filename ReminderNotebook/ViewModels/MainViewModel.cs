@@ -47,10 +47,13 @@ namespace ReminderNotebook.ViewModels
 
         private void DeleteReminder()
         {
-            if (SelectedReminder != null)
-            {
-                Reminders.Remove(SelectedReminder);
-            }
+            if (SelectedReminder == null)
+                return;
+
+            Reminders.Remove(SelectedReminder);
+            SelectedReminder = null;
+
+            StorageService.Save(Reminders.ToList());
         }
 
         private void EditReminder()
