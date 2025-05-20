@@ -10,7 +10,7 @@ namespace ReminderNotebook.Models
     {
         public DateTime ReminderTime { get; set; }
         public ReminderPriority Priority { get; set; } = ReminderPriority.Medium;
-
+        public bool IsNotified { get; set; }
         public bool IsTriggered { get; set; } = false;
     }
 

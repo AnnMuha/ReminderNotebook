@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Windows.Threading;
 using ReminderNotebook.Views;
 using ReminderNotebook.Services;
 
@@ -46,6 +47,8 @@ namespace ReminderNotebook.ViewModels
             }
         }
 
+        private readonly DispatcherTimer reminderTimer;
+
         public MainViewModel()
         {
             var loaded = StorageService.Load();
@@ -55,7 +58,31 @@ namespace ReminderNotebook.ViewModels
             DeleteCommand = new RelayCommand(DeleteReminder, () => SelectedReminder != null);
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
 
-            ApplyFilter(); // Запускаємо фільтрацію при завантаженні
+            ApplyFilter();
+
+            // ⏰ Таймер для сповіщень
+            reminderTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(10)
+            };
+            reminderTimer.Tick += ReminderTimer_Tick;
+            reminderTimer.Start();
+        }
+
+        private void ReminderTimer_Tick(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+
+            foreach (var reminder in Reminders)
+            {
+                if (!reminder.IsNotified && reminder.ReminderTime <= now)
+                {
+                    Notifier.Show($"⏰ Нагадування: {reminder.Title}");
+                    reminder.IsNotified = true;
+                }
+            }
+
+            StorageService.Save(Reminders.ToList());
         }
 
         private void ApplyFilter()
@@ -132,5 +159,6 @@ namespace ReminderNotebook.ViewModels
         }
     }
 }
+
 
 
