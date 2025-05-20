@@ -22,38 +22,40 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Назва -->
         <TextBlock Text="Назва:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0 5"/>
-        <TextBox Grid.Row="0" Grid.Column="1" Margin="5" x:Name="TitleTextBox"/>
+        <TextBox Grid.Row="0" Grid.Column="1" Margin="5" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <!-- Опис -->
         <TextBlock Text="Опис:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0 5"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Margin="5" x:Name="DescriptionTextBox"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Margin="5" Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <!-- Дата -->
         <TextBlock Text="Дата:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0 5"/>
-        <DatePicker Grid.Row="2" Grid.Column="1" Margin="5" x:Name="DatePicker"/>
+        <DatePicker Grid.Row="2" Grid.Column="1" Margin="5" SelectedDate="{Binding Date}"/>
 
-        <!-- Час -->
         <TextBlock Text="Час (HH:mm):" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0 5"/>
-        <TextBox Grid.Row="3" Grid.Column="1" Margin="5" x:Name="TimeTextBox"/>
+        <TextBox Grid.Row="3" Grid.Column="1" Margin="5" Text="{Binding Time, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <!-- Пріоритет -->
         <TextBlock Text="Пріоритет:" Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0 5"/>
-        <ComboBox Grid.Row="4" Grid.Column="1" Margin="5" x:Name="PriorityComboBox"
-                  SelectedIndex="1">
+        <ComboBox Grid.Row="4" Grid.Column="1" Margin="5" SelectedIndex="{Binding SelectedPriorityIndex}">
             <ComboBoxItem Content="Low"/>
             <ComboBoxItem Content="Medium"/>
             <ComboBoxItem Content="High"/>
         </ComboBox>
 
-        <!-- Кнопки -->
         <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 20 0 0">
-            <Button Content="Зберегти" Width="100" Margin="5" Click="Save_Click"
-                    Background="#27ae60" Foreground="White" FontWeight="Bold"/>
-            <Button Content="Скасувати" Width="100" Margin="5" Click="Cancel_Click"
-                    Background="#c0392b" Foreground="White" FontWeight="Bold"/>
+            <Button Content="Зберегти"
+                    Width="100"
+                    Margin="5"
+                    Command="{Binding SaveCommand}"
+                    Background="#27ae60"
+                    Foreground="White"
+                    FontWeight="Bold"/>
+            <Button Content="Скасувати"
+                    Width="100"
+                    Margin="5"
+                    Command="{Binding CancelCommand}"
+                    Background="#c0392b"
+                    Foreground="White"
+                    FontWeight="Bold"/>
         </StackPanel>
     </Grid>
 </Window>
-

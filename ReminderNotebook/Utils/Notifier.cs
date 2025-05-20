@@ -4,14 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using ReminderNotebook.Models;
 
 namespace ReminderNotebook.Utils
 {
-    public static class Notifier
+    public class Notifier : IReminderObserver
     {
-        public static void Show(string message)
+        public void OnReminderTriggered(Reminder reminder)
         {
-            MessageBox.Show(message, "Нагадування", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"⏰ Нагадування: {reminder.Title}", "Нагадування", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
+

@@ -12,81 +12,55 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using ReminderNotebook.Models;
+using ReminderNotebook.ViewModels;
 
 
 namespace ReminderNotebook.Views
 {
     public partial class AddReminderWindow : Window
     {
-        public Reminder NewReminder { get; private set; } = null!;
+        public Reminder? NewReminder { get; private set; }
 
         public AddReminderWindow()
         {
             InitializeComponent();
-            DatePicker.SelectedDate = DateTime.Now.Date;
-        }
+            DataContext = new AddReminderViewModel();
 
-        public AddReminderWindow(Reminder reminderToEdit)
-    : this()
-        {
-            TitleTextBox.Text = reminderToEdit.Title;
-            DescriptionTextBox.Text = reminderToEdit.Description;
-            DatePicker.SelectedDate = reminderToEdit.ReminderTime.Date;
-            TimeTextBox.Text = reminderToEdit.ReminderTime.ToString("HH:mm");
-            PriorityComboBox.SelectedIndex = reminderToEdit.Priority switch
+            var vm = new AddReminderViewModel();
+            vm.ReminderSaved += reminder =>
             {
-                ReminderPriority.Low => 0,
-                ReminderPriority.Medium => 1,
-                ReminderPriority.High => 2,
-                _ => 1
+                NewReminder = reminder;
+                DialogResult = true;
+                Close();
             };
 
-            // Повертаємо копію, яку можна редагувати
-            NewReminder = reminderToEdit;
-        }
-
-        private void Save_Click(object sender, RoutedEventArgs e)
-        {
-            // Перевірка заповненості назви та дати
-            if (string.IsNullOrWhiteSpace(TitleTextBox.Text) || DatePicker.SelectedDate == null)
+            vm.CancelRequested += () =>
             {
-                MessageBox.Show("Заповніть назву та дату.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Перевірка формату часу
-            if (!TimeSpan.TryParse(TimeTextBox.Text, out TimeSpan time))
-            {
-                MessageBox.Show("Невірний формат часу. Приклад: 14:30", "Помилка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Комбінування дати і часу
-            DateTime reminderDateTime = DatePicker.SelectedDate.Value.Date + time;
-
-            // Визначення пріоритету
-            ReminderPriority priority = ReminderPriority.Medium;
-            if (PriorityComboBox.SelectedIndex == 0) priority = ReminderPriority.Low;
-            else if (PriorityComboBox.SelectedIndex == 2) priority = ReminderPriority.High;
-
-            // Створення Reminder
-            NewReminder = new Reminder
-            {
-                Title = TitleTextBox.Text.Trim(),
-                Description = DescriptionTextBox.Text.Trim(),
-                ReminderTime = reminderDateTime,
-                Priority = priority,
-                CreatedAt = DateTime.Now
+                DialogResult = false;
+                Close();
             };
 
-            DialogResult = true;
-            Close();
+            DataContext = vm;
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        public AddReminderWindow(Reminder reminderToEdit) : this()
         {
-            DialogResult = false;
-            Close();
+            if (DataContext is AddReminderViewModel vm)
+            {
+                vm.Title = reminderToEdit.Title;
+                vm.Description = reminderToEdit.Description;
+                vm.Date = reminderToEdit.ReminderTime.Date;
+                vm.Time = reminderToEdit.ReminderTime.ToString("HH:mm");
+                vm.SelectedPriorityIndex = reminderToEdit.Priority switch
+                {
+                    ReminderPriority.Low => 0,
+                    ReminderPriority.Medium => 1,
+                    ReminderPriority.High => 2,
+                    _ => 1
+                };
+
+                NewReminder = reminderToEdit;
+            }
         }
     }
 }
