@@ -6,7 +6,18 @@ using System.Threading.Tasks;
 
 namespace ReminderNotebook.Models
 {
-    internal class Reminder
+    public class Reminder : Note
     {
+        public DateTime ReminderTime { get; set; }
+        public ReminderPriority Priority { get; set; } = ReminderPriority.Medium;
+
+        public bool IsTriggered { get; set; } = false;
+    }
+
+    public enum ReminderPriority
+    {
+        Low,
+        Medium,
+        High
     }
 }
