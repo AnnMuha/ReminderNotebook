@@ -10,6 +10,9 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using ReminderNotebook.Views;
+using ReminderNotebook.Services;
+using System.Linq;
+
 
 namespace ReminderNotebook.ViewModels
 {
@@ -34,6 +37,7 @@ namespace ReminderNotebook.ViewModels
 
         public MainViewModel()
         {
+            var loaded = StorageService.Load();
             Reminders = new ObservableCollection<Reminder>();
 
             AddCommand = new RelayCommand(AddReminder);
@@ -68,6 +72,7 @@ namespace ReminderNotebook.ViewModels
             if (result == true && window.NewReminder != null)
             {
                 Reminders.Add(window.NewReminder);
+                StorageService.Save(Reminders.ToList());
             }
         }
 
