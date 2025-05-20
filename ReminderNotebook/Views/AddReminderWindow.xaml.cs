@@ -26,6 +26,25 @@ namespace ReminderNotebook.Views
             DatePicker.SelectedDate = DateTime.Now.Date;
         }
 
+        public AddReminderWindow(Reminder reminderToEdit)
+    : this()
+        {
+            TitleTextBox.Text = reminderToEdit.Title;
+            DescriptionTextBox.Text = reminderToEdit.Description;
+            DatePicker.SelectedDate = reminderToEdit.ReminderTime.Date;
+            TimeTextBox.Text = reminderToEdit.ReminderTime.ToString("HH:mm");
+            PriorityComboBox.SelectedIndex = reminderToEdit.Priority switch
+            {
+                ReminderPriority.Low => 0,
+                ReminderPriority.Medium => 1,
+                ReminderPriority.High => 2,
+                _ => 1
+            };
+
+            // Повертаємо копію, яку можна редагувати
+            NewReminder = reminderToEdit;
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             // Перевірка заповненості назви та дати
