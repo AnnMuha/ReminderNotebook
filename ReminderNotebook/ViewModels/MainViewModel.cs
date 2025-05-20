@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using ReminderNotebook.Views;
 
 namespace ReminderNotebook.ViewModels
 {
@@ -40,11 +41,6 @@ namespace ReminderNotebook.ViewModels
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
         }
 
-        private void AddReminder()
-        {
-            // TODO: Відкрити AddReminderWindow, додати новий Reminder
-        }
-
         private void DeleteReminder()
         {
             if (SelectedReminder != null)
@@ -63,6 +59,18 @@ namespace ReminderNotebook.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+
+        private void AddReminder()
+        {
+            var window = new Views.AddReminderWindow();
+            bool? result = window.ShowDialog();
+
+            if (result == true && window.NewReminder != null)
+            {
+                Reminders.Add(window.NewReminder);
+            }
+        }
+
     }
 }
 
