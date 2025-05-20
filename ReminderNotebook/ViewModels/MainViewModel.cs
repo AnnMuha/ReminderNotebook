@@ -55,7 +55,33 @@ namespace ReminderNotebook.ViewModels
 
         private void EditReminder()
         {
-            // TODO: Відкрити AddReminderWindow з переданим SelectedReminder
+            if (SelectedReminder == null) return;
+
+            // Створюємо копію, щоб не змінювати напряму
+            var editedReminder = new Reminder
+            {
+                Title = SelectedReminder.Title,
+                Description = SelectedReminder.Description,
+                ReminderTime = SelectedReminder.ReminderTime,
+                Priority = SelectedReminder.Priority,
+                CreatedAt = SelectedReminder.CreatedAt
+            };
+
+            var window = new AddReminderWindow(editedReminder);
+            bool? result = window.ShowDialog();
+
+            if (result == true && window.NewReminder != null)
+            {
+                // Замінюємо старий Reminder на оновлений
+                int index = Reminders.IndexOf(SelectedReminder);
+                if (index >= 0)
+                {
+                    Reminders[index] = window.NewReminder;
+                    SelectedReminder = window.NewReminder;
+
+                    StorageService.Save(Reminders.ToList());
+                }
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
