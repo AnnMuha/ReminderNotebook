@@ -35,6 +35,7 @@ namespace ReminderNotebook.ViewModels
         public ICommand AddCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand EditCommand { get; }
+        public ICommand ClearFiltersCommand { get; }
 
         private Reminder? selectedReminder;
         public Reminder? SelectedReminder
@@ -54,10 +55,14 @@ namespace ReminderNotebook.ViewModels
         {
             var loaded = StorageService.Load();
             Reminders = new ObservableCollection<Reminder>(loaded);
+            // Підписуємося на зміну IsCompleted для кожного нагадування
+            foreach (var reminder in Reminders)
+                SubscribeToReminder(reminder);
 
             AddCommand = new RelayCommand(AddReminder);
             DeleteCommand = new RelayCommand(DeleteReminder, () => SelectedReminder != null);
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
+            ClearFiltersCommand = new RelayCommand(ClearFilters);
 
             ApplySearchAndFilter();
 
@@ -110,6 +115,12 @@ namespace ReminderNotebook.ViewModels
                     r.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
             }
 
+            if (SelectedStatusFilter == "Completed")
+                result = result.Where(r => r.IsCompleted);
+
+            else if (SelectedStatusFilter == "Pending")
+                result = result.Where(r => !r.IsCompleted);
+
             // Сортування
             result = SelectedSortOption switch
             {
@@ -131,6 +142,7 @@ namespace ReminderNotebook.ViewModels
             if (result == true && window.NewReminder != null)
             {
                 Reminders.Add(window.NewReminder);
+                SubscribeToReminder(window.NewReminder); // підписка тут
                 StorageService.Save(Reminders.ToList());
                 ApplySearchAndFilter();
             }
@@ -158,6 +170,7 @@ namespace ReminderNotebook.ViewModels
                 if (index >= 0)
                 {
                     Reminders[index] = window.NewReminder;
+                    SubscribeToReminder(window.NewReminder); // знову підписка
                     SelectedReminder = window.NewReminder;
 
                     StorageService.Save(Reminders.ToList());
@@ -236,5 +249,47 @@ namespace ReminderNotebook.ViewModels
 
         public Array PriorityOptions => Enum.GetValues(typeof(ReminderPriority));
 
+        private void ClearFilters()
+        {
+            SearchQuery = string.Empty;
+            SelectedPriorityFilter = null;
+            SelectedSortOption = "Newest first";
+        }
+
+        public List<string> StatusOptions { get; } = new List<string>
+        {
+            "All",
+            "Completed",
+            "Pending"
+        };
+
+        private string selectedStatusFilter = "All";
+        public string SelectedStatusFilter
+        {
+          get => selectedStatusFilter;
+          set
+         {
+              selectedStatusFilter = value;
+              OnPropertyChanged();
+              ApplySearchAndFilter();
+          }
+        }
+
+        private void SaveData()
+        {
+            StorageService.Save(Reminders.ToList());
+        }
+
+        private void SubscribeToReminder(Reminder reminder)
+        {
+            reminder.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(Reminder.IsCompleted))
+                {
+                    StorageService.Save(Reminders.ToList());
+                    ApplySearchAndFilter();
+                }
+            };
+        }
     }
 }
