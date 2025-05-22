@@ -20,8 +20,8 @@ namespace ReminderNotebook.ViewModels
         public ObservableCollection<Reminder> Reminders { get; set; }
         public ObservableCollection<Reminder> FilteredReminders { get; set; } = new();
 
-        private string selectedPriorityFilter = "All";
-        public string SelectedPriorityFilter
+        private ReminderPriority? selectedPriorityFilter = null;
+        public ReminderPriority? SelectedPriorityFilter
         {
             get => selectedPriorityFilter;
             set
@@ -96,13 +96,13 @@ namespace ReminderNotebook.ViewModels
 
             var result = Reminders.AsEnumerable();
 
-            // 🔹 Фільтр по пріоритету
-            if (SelectedPriorityFilter != "All")
+            // Фільтр за пріоритетом
+            if (SelectedPriorityFilter.HasValue)
             {
-                result = result.Where(r => r.Priority.ToString() == SelectedPriorityFilter);
+                result = result.Where(r => r.Priority == SelectedPriorityFilter.Value);
             }
 
-            // 🔹 Пошук по назві або опису
+            // Пошук по назві або опису
             if (!string.IsNullOrWhiteSpace(SearchQuery))
             {
                 result = result.Where(r =>
@@ -110,10 +110,18 @@ namespace ReminderNotebook.ViewModels
                     r.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
             }
 
+            // Сортування
+            result = SelectedSortOption switch
+            {
+                "Newest first" => result.OrderByDescending(r => r.ReminderTime),
+                "Oldest first" => result.OrderBy(r => r.ReminderTime),
+                "By priority" => result.OrderByDescending(r => r.Priority),
+                _ => result
+            };
+
             foreach (var reminder in result)
                 FilteredReminders.Add(reminder);
         }
-
 
         private void AddReminder()
         {
@@ -207,6 +215,26 @@ namespace ReminderNotebook.ViewModels
                 ApplySearchAndFilter();
             }
         }
+        private string selectedSortOption = "Newest first";
+        public string SelectedSortOption
+        {
+            get => selectedSortOption;
+            set
+            {
+                selectedSortOption = value;
+                OnPropertyChanged();
+                ApplySearchAndFilter();
+            }
+        }
+
+        public List<string> SortOptions { get; } = new List<string>
+        {
+            "Newest first",
+            "Oldest first",
+            "By priority"
+        };
+
+        public Array PriorityOptions => Enum.GetValues(typeof(ReminderPriority));
 
     }
 }
