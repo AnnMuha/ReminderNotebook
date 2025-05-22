@@ -36,6 +36,7 @@ namespace ReminderNotebook.ViewModels
         public ICommand DeleteCommand { get; }
         public ICommand EditCommand { get; }
         public ICommand ClearFiltersCommand { get; }
+        public ICommand ShowReportCommand { get; }
 
         private Reminder? selectedReminder;
         public Reminder? SelectedReminder
@@ -63,6 +64,8 @@ namespace ReminderNotebook.ViewModels
             DeleteCommand = new RelayCommand(DeleteReminder, () => SelectedReminder != null);
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
             ClearFiltersCommand = new RelayCommand(ClearFilters);
+            ShowReportCommand = new RelayCommand(ShowReport);
+
 
             ApplySearchAndFilter();
 
@@ -291,5 +294,16 @@ namespace ReminderNotebook.ViewModels
                 }
             };
         }
+
+        private void ShowReport()
+        {
+            var total = Reminders.Count;
+            var completed = Reminders.Count(r => r.IsCompleted);
+            var pending = Reminders.Count(r => !r.IsCompleted);
+
+            var reportWindow = new ReportWindow(total, completed, pending);
+            reportWindow.ShowDialog();
+        }
+
     }
 }

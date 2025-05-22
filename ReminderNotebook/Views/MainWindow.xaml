@@ -172,6 +172,13 @@
                     Background="#c0392b"
                     Foreground="White"
                     FontWeight="Bold"/>
+            <Button Content="📊 Звіт"
+                    Width="100"
+                    Margin="5"
+        Command="{Binding ShowReportCommand}"
+                    Background="#8e44ad"
+                    Foreground="White"
+                    FontWeight="Bold"/> 
         </StackPanel>
     </Grid>
 </Window>
