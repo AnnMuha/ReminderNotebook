@@ -172,6 +172,52 @@
 
 ---
 
+## 🖼 Основний інтерфейс програми
+
+Головне вікно з записами:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/1.jpg)
+
+Пошук нагадувань:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/2.jpg)
+
+Фільтрація по пріоритетам:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/3.jpg)
+
+Сортування нагадувань:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/4.jpg)
+
+Фільтр за статусом:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/5.jpg)
+
+Редагування нагадування:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/6.jpg)
+
+Спрацювання нагадування:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/7.jpg)
+
+Видалення нагадування:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/8.jpg)
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/9.jpg)
+
+Додавання нагадування:
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/10.jpg)
+
+Звіт :
+
+[Переглянути](https://github.com/AnnMuha/ReminderNotebook/blob/master/screenshots/11.jpg)
+
+---
+
 ## 📁 Дані
 
 🔒 Дані зберігаються у `reminders.json` у корені проєкту автоматично — навіть після закриття програми твої нагадування залишаються.
