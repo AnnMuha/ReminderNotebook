@@ -10,6 +10,7 @@
     <Window.Resources>
         <utils:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
         <utils:PriorityColorConverter x:Key="PriorityColorConverter"/>
+        <utils:CompletedToBackgroundConverter x:Key="CompletedToBackgroundConverter"/>
     </Window.Resources>
 
     <Grid Margin="10,20,10,20">
@@ -101,39 +102,42 @@
 
         <!-- Список нагадувань -->
         <Border Grid.Row="2"
-                Background="White"
-                CornerRadius="10"
-                Padding="10"
-                BorderBrush="#dcdfe3"
-                BorderThickness="1">
+        Background="White"
+        CornerRadius="10"
+        Padding="10"
+        BorderBrush="#dcdfe3"
+        BorderThickness="1">
             <ListBox ItemsSource="{Binding FilteredReminders}"
-                     SelectedItem="{Binding SelectedReminder, Mode=TwoWay}"
-                     BorderThickness="0">
+             SelectedItem="{Binding SelectedReminder, Mode=TwoWay}"
+             BorderThickness="0">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Padding="10" Margin="0 5"
                         CornerRadius="6"
-                        Background="#ecf0f1">   
+                        Background="{Binding IsCompleted, Converter={StaticResource CompletedToBackgroundConverter}}">
                             <DockPanel LastChildFill="True">
-                                <!-- CheckBox справа -->
-                                <CheckBox Content="Виконано"
-                              IsChecked="{Binding IsCompleted, Mode=TwoWay}"
-                              VerticalAlignment="Top"
-                              Margin="10 0 0 0"
-                              ToolTip="Позначити як виконане"
-                              DockPanel.Dock="Right"/>  
+
+                                <!-- CheckBox виконано -->
+                                <CheckBox Content="✓"
+                                  IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                                  VerticalAlignment="Top"
+                                  Margin="0 0 10 0"
+                                  ToolTip="Позначити як виконане"
+                                  DockPanel.Dock="Right"
+                                  FontWeight="Bold"
+                                  Foreground="Green"/>
 
                                 <!-- Основна інформація -->
                                 <StackPanel>
                                     <TextBlock Text="{Binding Title}"
-                           FontWeight="Bold"
-                           FontSize="14"/>
+                                       FontWeight="Bold"
+                                       FontSize="14"/>
                                     <TextBlock Text="{Binding ReminderTime, StringFormat=О {0:dd.MM.yyyy HH:mm}}"
-                           Foreground="Gray"
-                           FontSize="12"/>
+                                       Foreground="Gray"
+                                       FontSize="12"/>
                                     <TextBlock Text="{Binding Priority}"
-                           Foreground="{Binding Priority, Converter={StaticResource PriorityColorConverter}}"
-                           FontSize="12"/>
+                                       Foreground="{Binding Priority, Converter={StaticResource PriorityColorConverter}}"
+                                       FontSize="12"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
