@@ -1,22 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ReminderNotebook.Models;
-using ReminderNotebook.Utils;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using System.Windows.Threading;
+using ReminderNotebook.Models;
+using ReminderNotebook.Utils;
 using ReminderNotebook.Views;
 using ReminderNotebook.Services;
+using ReminderNotebook.Filters;
 
 namespace ReminderNotebook.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        private readonly FilterService filterService;
+        private readonly DispatcherTimer reminderTimer = new DispatcherTimer { 
+            Interval = TimeSpan.FromSeconds(10) 
+        };
+
+        private readonly List<IReminderObserver> observers = new();
+
         public ObservableCollection<Reminder> Reminders { get; set; }
         public ObservableCollection<Reminder> FilteredReminders { get; set; } = new();
 
@@ -28,15 +34,9 @@ namespace ReminderNotebook.ViewModels
             {
                 selectedPriorityFilter = value;
                 OnPropertyChanged();
-                ApplySearchAndFilter();
+                ApplyFiltersAndSort();
             }
         }
-
-        public ICommand AddCommand { get; }
-        public ICommand DeleteCommand { get; }
-        public ICommand EditCommand { get; }
-        public ICommand ClearFiltersCommand { get; }
-        public ICommand ShowReportCommand { get; }
 
         private Reminder? selectedReminder;
         public Reminder? SelectedReminder
@@ -49,149 +49,237 @@ namespace ReminderNotebook.ViewModels
             }
         }
 
-        private readonly DispatcherTimer reminderTimer;
-        private readonly List<IReminderObserver> observers = new();
+        private string searchQuery = string.Empty;
+        public string SearchQuery
+        {
+            get => searchQuery;
+            set
+            {
+                searchQuery = value;
+                OnPropertyChanged();
+                ApplyFiltersAndSort();
+            }
+        }
+
+        private string selectedSortOption = "Newest first";
+        public string SelectedSortOption
+        {
+            get => selectedSortOption;
+            set
+            {
+                selectedSortOption = value;
+                OnPropertyChanged();
+                ApplyFiltersAndSort();
+            }
+        }
+
+        private string selectedStatusFilter = "All";
+        public string SelectedStatusFilter
+        {
+            get => selectedStatusFilter;
+            set
+            {
+                selectedStatusFilter = value;
+                OnPropertyChanged();
+                ApplyFiltersAndSort();
+            }
+        }
+
+        public ICommand AddCommand { get; set; }
+        public ICommand DeleteCommand { get; set; }
+        public ICommand EditCommand { get; set; }
+        public ICommand ClearFiltersCommand { get; set; }
+        public ICommand ShowReportCommand { get; set; }
+
+        public List<string> SortOptions => SortingService.AvailableSortOptions.ToList();
+        public Array PriorityOptions => Enum.GetValues(typeof(ReminderPriority));
+        public List<string> StatusOptions { get; set; } = new List<string> { "All", "Completed", "Pending" };
 
         public MainViewModel()
         {
+            filterService = new FilterService();
+            InitializeData();
+            InitializeCommands();
+            SetupTimer();
+            SetupNotifications();
+        }
+
+        private void InitializeData()
+        {
             var loaded = StorageService.Load();
             Reminders = new ObservableCollection<Reminder>(loaded);
-            // Підписуємося на зміну IsCompleted для кожного нагадування
+
             foreach (var reminder in Reminders)
                 SubscribeToReminder(reminder);
 
+            ApplyFiltersAndSort();
+        }
+
+        private void InitializeCommands()
+        {
             AddCommand = new RelayCommand(AddReminder);
             DeleteCommand = new RelayCommand(DeleteReminder, () => SelectedReminder != null);
             EditCommand = new RelayCommand(EditReminder, () => SelectedReminder != null);
             ClearFiltersCommand = new RelayCommand(ClearFilters);
             ShowReportCommand = new RelayCommand(ShowReport);
+        }
 
-
-            ApplySearchAndFilter();
-
-            // Таймер для сповіщень
-            reminderTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(10)
-            };
-            reminderTimer.Tick += ReminderTimer_Tick;
+        private void SetupTimer()
+        {
+            reminderTimer.Tick += CheckForDueReminders;
             reminderTimer.Start();
+        }
 
-            // Підписуємо Notifier як спостерігача
+        private void SetupNotifications()
+        {
             var notifier = new Notifier();
             Subscribe(notifier);
         }
 
-        private void ReminderTimer_Tick(object? sender, EventArgs e)
-        {
-            var now = DateTime.Now;
-
-            foreach (var reminder in Reminders)
-            {
-                if (!reminder.IsNotified && reminder.ReminderTime <= now)
-                {
-                    Notify(reminder);
-                    reminder.IsNotified = true;
-                }
-            }
-
-            StorageService.Save(Reminders.ToList());
-        }
-
-        private void ApplySearchAndFilter()
+        private void ApplyFiltersAndSort()
         {
             FilteredReminders.Clear();
+            filterService.ClearStrategies();
 
-            var result = Reminders.AsEnumerable();
+            BuildFilterStrategies();
 
-            // Фільтр за пріоритетом
-            if (SelectedPriorityFilter.HasValue)
-            {
-                result = result.Where(r => r.Priority == SelectedPriorityFilter.Value);
-            }
+            var filtered = filterService.ApplyFilters(Reminders);
+            var sorted = SortingService.Sort(filtered, SelectedSortOption);
 
-            // Пошук по назві або опису
-            if (!string.IsNullOrWhiteSpace(SearchQuery))
-            {
-                result = result.Where(r =>
-                    r.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-                    r.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (SelectedStatusFilter == "Completed")
-                result = result.Where(r => r.IsCompleted);
-
-            else if (SelectedStatusFilter == "Pending")
-                result = result.Where(r => !r.IsCompleted);
-
-            // Сортування
-            result = SelectedSortOption switch
-            {
-                "Newest first" => result.OrderByDescending(r => r.ReminderTime),
-                "Oldest first" => result.OrderBy(r => r.ReminderTime),
-                "By priority" => result.OrderByDescending(r => r.Priority),
-                _ => result
-            };
-
-            foreach (var reminder in result)
+            foreach (var reminder in sorted)
                 FilteredReminders.Add(reminder);
+        }
+
+        private void BuildFilterStrategies()
+        {
+            if (SelectedPriorityFilter.HasValue)
+                filterService.AddStrategy(new PriorityFilterStrategy(SelectedPriorityFilter.Value));
+
+            if (!string.IsNullOrWhiteSpace(SearchQuery))
+                filterService.AddStrategy(new SearchFilterStrategy(SearchQuery));
+
+            if (SelectedStatusFilter != "All")
+                filterService.AddStrategy(new StatusFilterStrategy(SelectedStatusFilter));
+        }
+
+        private void CheckForDueReminders(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            var dueReminders = Reminders.Where(r => !r.IsNotified && r.ReminderTime <= now).ToList();
+
+            foreach (var reminder in dueReminders)
+            {
+                Notify(reminder);
+                reminder.IsNotified = true;
+            }
+
+            if (dueReminders.Any())
+                SaveData();
         }
 
         private void AddReminder()
         {
             var window = new AddReminderWindow();
-            bool? result = window.ShowDialog();
+            var result = window.ShowDialog();
 
             if (result == true && window.NewReminder != null)
             {
-                Reminders.Add(window.NewReminder);
-                SubscribeToReminder(window.NewReminder); // підписка тут
-                StorageService.Save(Reminders.ToList());
-                ApplySearchAndFilter();
+                AddNewReminder(window.NewReminder);
             }
+        }
+
+        private void AddNewReminder(Reminder reminder)
+        {
+            Reminders.Add(reminder);
+            SubscribeToReminder(reminder);
+            SaveData();
+            ApplyFiltersAndSort();
         }
 
         private void EditReminder()
         {
             if (SelectedReminder == null) return;
 
-            var editedReminder = new Reminder
-            {
-                Title = SelectedReminder.Title,
-                Description = SelectedReminder.Description,
-                ReminderTime = SelectedReminder.ReminderTime,
-                Priority = SelectedReminder.Priority,
-                CreatedAt = SelectedReminder.CreatedAt
-            };
-
+            var editedReminder = CreateReminderCopy(SelectedReminder);
             var window = new AddReminderWindow(editedReminder);
-            bool? result = window.ShowDialog();
+            var result = window.ShowDialog();
 
             if (result == true && window.NewReminder != null)
             {
-                int index = Reminders.IndexOf(SelectedReminder);
-                if (index >= 0)
-                {
-                    Reminders[index] = window.NewReminder;
-                    SubscribeToReminder(window.NewReminder); // знову підписка
-                    SelectedReminder = window.NewReminder;
+                UpdateExistingReminder(window.NewReminder);
+            }
+        }
 
-                    StorageService.Save(Reminders.ToList());
-                    ApplySearchAndFilter();
-                }
+        private Reminder CreateReminderCopy(Reminder original)
+        {
+            return new Reminder
+            {
+                Title = original.Title,
+                Description = original.Description,
+                ReminderTime = original.ReminderTime,
+                Priority = original.Priority,
+                CreatedAt = original.CreatedAt
+            };
+        }
+
+        private void UpdateExistingReminder(Reminder newReminder)
+        {
+            int index = Reminders.IndexOf(SelectedReminder);
+            if (index >= 0)
+            {
+                Reminders[index] = newReminder;
+                SubscribeToReminder(newReminder);
+                SelectedReminder = newReminder;
+                SaveData();
+                ApplyFiltersAndSort();
             }
         }
 
         private void DeleteReminder()
         {
-            if (SelectedReminder == null)
-                return;
+            if (SelectedReminder == null) return;
 
             Reminders.Remove(SelectedReminder);
             SelectedReminder = null;
+            SaveData();
+            ApplyFiltersAndSort();
+        }
 
+        private void ClearFilters()
+        {
+            SearchQuery = string.Empty;
+            SelectedPriorityFilter = null;
+            SelectedSortOption = "Newest first";
+            SelectedStatusFilter = "All";
+        }
+
+        private void ShowReport()
+        {
+            var total = Reminders.Count;
+            var completed = Reminders.Count(r => r.IsCompleted);
+            var pending = total - completed;
+
+            var reportWindow = new ReportWindow(total, completed, pending);
+            reportWindow.ShowDialog();
+        }
+
+        private void SaveData()
+        {
             StorageService.Save(Reminders.ToList());
-            ApplySearchAndFilter();
+        }
+
+        private void SubscribeToReminder(Reminder reminder)
+        {
+            reminder.PropertyChanged += OnReminderPropertyChanged;
+        }
+
+        private void OnReminderPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(Reminder.IsCompleted))
+            {
+                SaveData();
+                ApplyFiltersAndSort();
+            }
         }
 
         public void Subscribe(IReminderObserver observer)
@@ -202,16 +290,13 @@ namespace ReminderNotebook.ViewModels
 
         public void Unsubscribe(IReminderObserver observer)
         {
-            if (observers.Contains(observer))
-                observers.Remove(observer);
+            observers.Remove(observer);
         }
 
         private void Notify(Reminder reminder)
         {
             foreach (var observer in observers)
-            {
                 observer.OnReminderTriggered(reminder);
-            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -219,91 +304,5 @@ namespace ReminderNotebook.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
-
-        private string searchQuery = string.Empty;
-        public string SearchQuery
-        {
-            get => searchQuery;
-            set
-            {
-                searchQuery = value;
-                OnPropertyChanged();
-                ApplySearchAndFilter();
-            }
-        }
-        private string selectedSortOption = "Newest first";
-        public string SelectedSortOption
-        {
-            get => selectedSortOption;
-            set
-            {
-                selectedSortOption = value;
-                OnPropertyChanged();
-                ApplySearchAndFilter();
-            }
-        }
-
-        public List<string> SortOptions { get; } = new List<string>
-        {
-            "Newest first",
-            "Oldest first",
-            "By priority"
-        };
-
-        public Array PriorityOptions => Enum.GetValues(typeof(ReminderPriority));
-
-        private void ClearFilters()
-        {
-            SearchQuery = string.Empty;
-            SelectedPriorityFilter = null;
-            SelectedSortOption = "Newest first";
-        }
-
-        public List<string> StatusOptions { get; } = new List<string>
-        {
-            "All",
-            "Completed",
-            "Pending"
-        };
-
-        private string selectedStatusFilter = "All";
-        public string SelectedStatusFilter
-        {
-          get => selectedStatusFilter;
-          set
-         {
-              selectedStatusFilter = value;
-              OnPropertyChanged();
-              ApplySearchAndFilter();
-          }
-        }
-
-        private void SaveData()
-        {
-            StorageService.Save(Reminders.ToList());
-        }
-
-        private void SubscribeToReminder(Reminder reminder)
-        {
-            reminder.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(Reminder.IsCompleted))
-                {
-                    StorageService.Save(Reminders.ToList());
-                    ApplySearchAndFilter();
-                }
-            };
-        }
-
-        private void ShowReport()
-        {
-            var total = Reminders.Count;
-            var completed = Reminders.Count(r => r.IsCompleted);
-            var pending = Reminders.Count(r => !r.IsCompleted);
-
-            var reportWindow = new ReportWindow(total, completed, pending);
-            reportWindow.ShowDialog();
-        }
-
     }
 }
