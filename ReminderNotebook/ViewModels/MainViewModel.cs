@@ -21,6 +21,8 @@ namespace ReminderNotebook.ViewModels
         public ObservableCollection<Reminder> FilteredReminders { get; set; } = new();
 
         private ReminderPriority? selectedPriorityFilter = null;
+        private readonly IReminderRepository _repository;
+
         public ReminderPriority? SelectedPriorityFilter
         {
             get => selectedPriorityFilter;
@@ -52,9 +54,11 @@ namespace ReminderNotebook.ViewModels
         private readonly DispatcherTimer reminderTimer;
         private readonly List<IReminderObserver> observers = new();
 
-        public MainViewModel()
+        public MainViewModel(IReminderRepository repository)
         {
-            var loaded = StorageService.Load();
+            _repository = repository;
+
+            var loaded = _repository.Load();
             Reminders = new ObservableCollection<Reminder>(loaded);
             // Підписуємося на зміну IsCompleted для кожного нагадування
             foreach (var reminder in Reminders)
@@ -95,7 +99,8 @@ namespace ReminderNotebook.ViewModels
                 }
             }
 
-            StorageService.Save(Reminders.ToList());
+            _repository.Save(Reminders.ToList());
+
         }
 
         private void ApplySearchAndFilter()
@@ -146,7 +151,7 @@ namespace ReminderNotebook.ViewModels
             {
                 Reminders.Add(window.NewReminder);
                 SubscribeToReminder(window.NewReminder); // підписка тут
-                StorageService.Save(Reminders.ToList());
+                _repository.Save(Reminders.ToList());
                 ApplySearchAndFilter();
             }
         }
@@ -176,7 +181,7 @@ namespace ReminderNotebook.ViewModels
                     SubscribeToReminder(window.NewReminder); // знову підписка
                     SelectedReminder = window.NewReminder;
 
-                    StorageService.Save(Reminders.ToList());
+                    _repository.Save(Reminders.ToList());
                     ApplySearchAndFilter();
                 }
             }
@@ -190,7 +195,7 @@ namespace ReminderNotebook.ViewModels
             Reminders.Remove(SelectedReminder);
             SelectedReminder = null;
 
-            StorageService.Save(Reminders.ToList());
+            _repository.Save(Reminders.ToList());
             ApplySearchAndFilter();
         }
 
@@ -269,18 +274,18 @@ namespace ReminderNotebook.ViewModels
         private string selectedStatusFilter = "All";
         public string SelectedStatusFilter
         {
-          get => selectedStatusFilter;
-          set
-         {
-              selectedStatusFilter = value;
-              OnPropertyChanged();
-              ApplySearchAndFilter();
-          }
+            get => selectedStatusFilter;
+            set
+            {
+                selectedStatusFilter = value;
+                OnPropertyChanged();
+                ApplySearchAndFilter();
+            }
         }
 
         private void SaveData()
         {
-            StorageService.Save(Reminders.ToList());
+            _repository.Save(Reminders.ToList());
         }
 
         private void SubscribeToReminder(Reminder reminder)
@@ -289,7 +294,7 @@ namespace ReminderNotebook.ViewModels
             {
                 if (e.PropertyName == nameof(Reminder.IsCompleted))
                 {
-                    StorageService.Save(Reminders.ToList());
+                    _repository.Save(Reminders.ToList());
                     ApplySearchAndFilter();
                 }
             };
