@@ -21,7 +21,6 @@ namespace ReminderNotebook.Views
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
         }
     }
 }

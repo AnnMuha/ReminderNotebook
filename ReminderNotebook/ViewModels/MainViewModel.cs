@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections.ObjectModel;
@@ -17,11 +17,9 @@ namespace ReminderNotebook.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private readonly FilterService filterService;
-        private readonly DispatcherTimer reminderTimer = new DispatcherTimer { 
-            Interval = TimeSpan.FromSeconds(10) 
-        };
-
+        private readonly DispatcherTimer reminderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
         private readonly List<IReminderObserver> observers = new();
+        private readonly IReminderRepository _repository;
 
         public ObservableCollection<Reminder> Reminders { get; set; }
         public ObservableCollection<Reminder> FilteredReminders { get; set; } = new();
@@ -95,9 +93,11 @@ namespace ReminderNotebook.ViewModels
         public Array PriorityOptions => Enum.GetValues(typeof(ReminderPriority));
         public List<string> StatusOptions { get; set; } = new List<string> { "All", "Completed", "Pending" };
 
-        public MainViewModel()
+        public MainViewModel(IReminderRepository repository)
         {
             filterService = new FilterService();
+            _repository = repository;
+
             InitializeData();
             InitializeCommands();
             SetupTimer();
@@ -106,7 +106,7 @@ namespace ReminderNotebook.ViewModels
 
         private void InitializeData()
         {
-            var loaded = StorageService.Load();
+            var loaded = _repository.Load();
             Reminders = new ObservableCollection<Reminder>(loaded);
 
             foreach (var reminder in Reminders)
@@ -140,7 +140,6 @@ namespace ReminderNotebook.ViewModels
         {
             FilteredReminders.Clear();
             filterService.ClearStrategies();
-
             BuildFilterStrategies();
 
             var filtered = filterService.ApplyFilters(Reminders);
@@ -184,7 +183,10 @@ namespace ReminderNotebook.ViewModels
 
             if (result == true && window.NewReminder != null)
             {
-                AddNewReminder(window.NewReminder);
+                Reminders.Add(window.NewReminder);
+                SubscribeToReminder(window.NewReminder);
+                _repository.Save(Reminders.ToList());
+                ApplyFiltersAndSort();
             }
         }
 
@@ -206,7 +208,16 @@ namespace ReminderNotebook.ViewModels
 
             if (result == true && window.NewReminder != null)
             {
-                UpdateExistingReminder(window.NewReminder);
+                int index = Reminders.IndexOf(SelectedReminder);
+                if (index >= 0)
+                {
+                    Reminders[index] = window.NewReminder;
+                    SubscribeToReminder(window.NewReminder);
+                    SelectedReminder = window.NewReminder;
+
+                    _repository.Save(Reminders.ToList());
+                    ApplyFiltersAndSort();
+                }
             }
         }
 
@@ -220,19 +231,6 @@ namespace ReminderNotebook.ViewModels
                 Priority = original.Priority,
                 CreatedAt = original.CreatedAt
             };
-        }
-
-        private void UpdateExistingReminder(Reminder newReminder)
-        {
-            int index = Reminders.IndexOf(SelectedReminder);
-            if (index >= 0)
-            {
-                Reminders[index] = newReminder;
-                SubscribeToReminder(newReminder);
-                SelectedReminder = newReminder;
-                SaveData();
-                ApplyFiltersAndSort();
-            }
         }
 
         private void DeleteReminder()
@@ -265,7 +263,7 @@ namespace ReminderNotebook.ViewModels
 
         private void SaveData()
         {
-            StorageService.Save(Reminders.ToList());
+            _repository.Save(Reminders.ToList());
         }
 
         private void SubscribeToReminder(Reminder reminder)
@@ -277,7 +275,7 @@ namespace ReminderNotebook.ViewModels
         {
             if (e.PropertyName == nameof(Reminder.IsCompleted))
             {
-                SaveData();
+                _repository.Save(Reminders.ToList());
                 ApplyFiltersAndSort();
             }
         }
