@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -7,11 +7,25 @@ namespace ReminderNotebook.Models
     public class Reminder : Note, INotifyPropertyChanged
     {
         private bool isCompleted;
+        private ReminderCategory category = ReminderCategory.General;
 
         public DateTime ReminderTime { get; set; }
         public ReminderPriority Priority { get; set; } = ReminderPriority.Medium;
         public bool IsNotified { get; set; }
         public bool IsTriggered { get; set; } = false;
+        
+        public ReminderCategory Category
+        {
+            get => category;
+            set
+            {
+                if (category != value)
+                {
+                    category = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public bool IsCompleted
         {
@@ -39,5 +53,18 @@ namespace ReminderNotebook.Models
         Medium,
         High
     }
+    
+    public enum ReminderCategory
+    {
+        General,
+        Work,
+        Personal,
+        Health,
+        Shopping,
+        Bills,
+        Education,
+        Events,
+        Travel,
+        Other
+    }
 }
-
