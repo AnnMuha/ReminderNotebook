@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Collections.Generic;
 using ReminderNotebook.Models;
 using ReminderNotebook.Utils;
 
@@ -15,6 +16,18 @@ namespace ReminderNotebook.ViewModels
         public DateTime Date { get; set; } = DateTime.Now.Date;
         public string Time { get; set; } = "12:00";
         public int SelectedPriorityIndex { get; set; } = 1; // Medium by default
+        public Array CategoryOptions => Enum.GetValues(typeof(ReminderCategory));
+        
+        private ReminderCategory selectedCategory = ReminderCategory.General;
+        public ReminderCategory SelectedCategory 
+        { 
+            get => selectedCategory;
+            set 
+            {
+                selectedCategory = value;
+                OnPropertyChanged();
+            }
+        }
 
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
@@ -55,7 +68,8 @@ namespace ReminderNotebook.ViewModels
                 Description = Description.Trim(),
                 ReminderTime = Date + timeSpan,
                 Priority = priority,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                Category = SelectedCategory
             };
 
             ReminderSaved?.Invoke(reminder);
