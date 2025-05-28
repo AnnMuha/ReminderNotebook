@@ -25,6 +25,18 @@ namespace ReminderNotebook.ViewModels
         public ObservableCollection<Reminder> FilteredReminders { get; set; } = new();
 
         private ReminderPriority? selectedPriorityFilter = null;
+
+        private const string StatusAll = "All";
+        private const string StatusCompleted = "Completed";
+        private const string StatusPending = "Pending";
+        private const string SortNewestFirst = "Newest first";
+
+        private void AddReminderWithSubscription(Reminder reminder)
+        {
+            Reminders.Add(reminder);
+            SubscribeToReminder(reminder);
+        }
+
         public ReminderPriority? SelectedPriorityFilter
         {
             get => selectedPriorityFilter;
@@ -91,7 +103,7 @@ namespace ReminderNotebook.ViewModels
 
         public List<string> SortOptions => SortingService.AvailableSortOptions.ToList();
         public Array PriorityOptions => Enum.GetValues(typeof(ReminderPriority));
-        public List<string> StatusOptions { get; set; } = new List<string> { "All", "Completed", "Pending" };
+        public List<string> StatusOptions { get; set; } = new List<string> { StatusAll, StatusCompleted, StatusPending }; 
 
         public MainViewModel(IReminderRepository repository)
         {
@@ -157,7 +169,7 @@ namespace ReminderNotebook.ViewModels
             if (!string.IsNullOrWhiteSpace(SearchQuery))
                 filterService.AddStrategy(new SearchFilterStrategy(SearchQuery));
 
-            if (SelectedStatusFilter != "All")
+            if (SelectedStatusFilter != StatusAll)
                 filterService.AddStrategy(new StatusFilterStrategy(SelectedStatusFilter));
         }
 
@@ -183,19 +195,19 @@ namespace ReminderNotebook.ViewModels
 
             if (result == true && window.NewReminder != null)
             {
-                Reminders.Add(window.NewReminder);
-                SubscribeToReminder(window.NewReminder);
+                AddReminderWithSubscription(window.NewReminder);
                 _repository.Save(Reminders.ToList());
                 ApplyFiltersAndSort();
+
             }
         }
 
         private void AddNewReminder(Reminder reminder)
         {
-            Reminders.Add(reminder);
-            SubscribeToReminder(reminder);
+            AddReminderWithSubscription(reminder);
             SaveData();
             ApplyFiltersAndSort();
+
         }
 
         private void EditReminder()
@@ -211,12 +223,15 @@ namespace ReminderNotebook.ViewModels
                 int index = Reminders.IndexOf(SelectedReminder);
                 if (index >= 0)
                 {
+                    UnsubscribeFromReminder(Reminders[index]);
+
                     Reminders[index] = window.NewReminder;
                     SubscribeToReminder(window.NewReminder);
                     SelectedReminder = window.NewReminder;
 
                     _repository.Save(Reminders.ToList());
                     ApplyFiltersAndSort();
+
                 }
             }
         }
@@ -235,8 +250,9 @@ namespace ReminderNotebook.ViewModels
 
         private void DeleteReminder()
         {
-            if (SelectedReminder == null) return;
+            if (SelectedReminder == null) return; 
 
+            UnsubscribeFromReminder(SelectedReminder);
             Reminders.Remove(SelectedReminder);
             SelectedReminder = null;
             SaveData();
@@ -270,6 +286,11 @@ namespace ReminderNotebook.ViewModels
         {
             reminder.PropertyChanged += OnReminderPropertyChanged;
         }
+        private void UnsubscribeFromReminder(Reminder reminder)
+        {
+            reminder.PropertyChanged -= OnReminderPropertyChanged;
+        }
+
 
         private void OnReminderPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
